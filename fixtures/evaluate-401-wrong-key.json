@@ -1,0 +1,24 @@
+{
+  "_note": "Wrong key.",
+  "_captured": "live test environment, 2026-10-28, throwaway tenant (deleted)",
+  "request": {
+    "path": "/evaluate",
+    "headers": {},
+    "body": {
+      "category": "single-vision"
+    }
+  },
+  "response": {
+    "status": 401,
+    "headers": {
+      "cache-control": "no-store",
+      "retry-after": null
+    },
+    "body": {
+      "error": "INVALID_API_KEY",
+      "message": "Invalid or expired API key",
+      "request_id": "00000000-0000-4000-8000-000000000006",
+      "documentation_url": "https://docs.example.com/api/v1/lens-journey/evaluate#INVALID_API_KEY"
+    }
+  }
+}

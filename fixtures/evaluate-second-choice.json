@@ -1,0 +1,192 @@
+{
+  "_note": "After the first pick: the next choice (or the summary if the workflow has no more).",
+  "_captured": "live test environment, 2026-10-28, throwaway tenant (deleted)",
+  "request": {
+    "path": "/evaluate",
+    "headers": {},
+    "body": {
+      "category": "single-vision",
+      "frame": {
+        "sku": "FIXTURE-SKU"
+      },
+      "prescription": {
+        "od": {
+          "sph": -1.5,
+          "cyl": -0.5,
+          "axis": 90
+        },
+        "os": {
+          "sph": -1.25,
+          "cyl": 0,
+          "axis": ""
+        },
+        "pd": 62
+      },
+      "selections": {
+        "vision-option": [
+          "anti-reflective"
+        ]
+      }
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "cache-control": "no-store",
+      "retry-after": null
+    },
+    "body": {
+      "success": true,
+      "workflow_version": "0000000000000001",
+      "category": "single-vision",
+      "terminal": "choice",
+      "step": {
+        "id": "ar-index",
+        "type": "choice",
+        "label": "Lens Index — Anti-Reflective",
+        "selection_mode": "single",
+        "options": [
+          {
+            "id": "opt-anti-reflective-150-stock",
+            "label": "Index 1.50",
+            "price": 0,
+            "msrp": 0,
+            "platform_sku": "LENS-AR-150-STOCK",
+            "addon_skus": [],
+            "enabled": true,
+            "recommended": true
+          },
+          {
+            "id": "opt-anti-reflective-160-stock",
+            "label": "Index 1.60",
+            "price": 0,
+            "msrp": 0,
+            "platform_sku": "LENS-AR-160-STOCK",
+            "addon_skus": [],
+            "enabled": true,
+            "recommended": false
+          },
+          {
+            "id": "opt-anti-reflective-167-stock",
+            "label": "Index 1.67",
+            "price": 0,
+            "msrp": 0,
+            "platform_sku": "LENS-AR-167-STOCK",
+            "addon_skus": [],
+            "enabled": false,
+            "recommended": false
+          },
+          {
+            "id": "opt-anti-reflective-174-stock",
+            "label": "Index 1.74",
+            "price": 0,
+            "msrp": 0,
+            "platform_sku": "LENS-AR-174-STOCK",
+            "addon_skus": [],
+            "enabled": false,
+            "recommended": false
+          },
+          {
+            "id": "opt-anti-reflective-150-rx",
+            "label": "Index 1.50",
+            "price": 0,
+            "msrp": 0,
+            "platform_sku": "LENS-AR-150-RX",
+            "addon_skus": [],
+            "enabled": false,
+            "recommended": false
+          },
+          {
+            "id": "opt-anti-reflective-160-rx",
+            "label": "Index 1.60",
+            "price": 0,
+            "msrp": 0,
+            "platform_sku": "LENS-AR-160-RX",
+            "addon_skus": [],
+            "enabled": false,
+            "recommended": false
+          },
+          {
+            "id": "opt-anti-reflective-167-rx",
+            "label": "Index 1.67",
+            "price": 0,
+            "msrp": 0,
+            "platform_sku": "LENS-AR-167-RX",
+            "addon_skus": [],
+            "enabled": false,
+            "recommended": false
+          }
+        ]
+      },
+      "selections": {
+        "vision-option": [
+          {
+            "optionId": "anti-reflective",
+            "optionLabel": "Anti-Reflective"
+          }
+        ]
+      },
+      "auto_selected": [],
+      "violations": [],
+      "prescription": {
+        "complete": true,
+        "errors": [],
+        "normalized": {
+          "od": {
+            "sph": "-1.50",
+            "cyl": "-0.50",
+            "axis": "90",
+            "add": ""
+          },
+          "os": {
+            "sph": "-1.25",
+            "cyl": "0.00",
+            "axis": "",
+            "add": ""
+          },
+          "pd": "62.00",
+          "pdOd": "",
+          "pdOs": ""
+        },
+        "ranges": {
+          "sph": {
+            "min": -30,
+            "max": 30,
+            "step": 0.25
+          },
+          "cyl": {
+            "min": -10,
+            "max": 10,
+            "step": 0.25
+          },
+          "add": {
+            "min": 0,
+            "max": 4,
+            "step": 0.25
+          },
+          "pd": {
+            "binocular": {
+              "min": 40,
+              "max": 90
+            },
+            "monocular": {
+              "min": 20,
+              "max": 45
+            }
+          },
+          "axis": {
+            "min": 1,
+            "max": 180,
+            "step": 1
+          }
+        }
+      },
+      "settings_warnings": [],
+      "gate": {
+        "decision": "pass",
+        "degraded": false,
+        "reason": "eligibility-call-skipped"
+      }
+    }
+  }
+}

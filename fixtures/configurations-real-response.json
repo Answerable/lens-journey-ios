@@ -1,0 +1,49 @@
+{
+  "_note": "POST /configurations against the throwaway tenant: this is whatever the real route answered (a refusal when the tenant has no price book).",
+  "_captured": "live test environment, 2026-10-28, throwaway tenant (deleted)",
+  "request": {
+    "path": "/configurations",
+    "headers": {},
+    "body": {
+      "category": "single-vision",
+      "selections": [
+        {
+          "node_id": "vision-option",
+          "option_id": "anti-reflective"
+        },
+        {
+          "node_id": "ar-index",
+          "option_id": "opt-anti-reflective-150-stock"
+        }
+      ],
+      "session_id": "fixture-session-0001",
+      "prescription": {
+        "od": {
+          "sph": -1.5,
+          "cyl": -0.5,
+          "axis": 90
+        },
+        "os": {
+          "sph": -1.25,
+          "cyl": 0,
+          "axis": ""
+        },
+        "pd": 62
+      },
+      "idempotency_key": "fixture-attempt-0001"
+    }
+  },
+  "response": {
+    "status": 422,
+    "headers": {
+      "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+      "retry-after": null
+    },
+    "body": {
+      "success": false,
+      "error": "Tenant has no market/currency configured — cannot price a lens configuration",
+      "code": "MARKET_UNRESOLVED",
+      "details": null
+    }
+  }
+}

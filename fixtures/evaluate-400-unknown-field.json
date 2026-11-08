@@ -1,0 +1,25 @@
+{
+  "_note": "Unknown top-level field.",
+  "_captured": "live test environment, 2026-10-28, throwaway tenant (deleted)",
+  "request": {
+    "path": "/evaluate",
+    "headers": {},
+    "body": {
+      "category": "single-vision",
+      "surprise": 1
+    }
+  },
+  "response": {
+    "status": 400,
+    "headers": {
+      "cache-control": "no-store",
+      "retry-after": null
+    },
+    "body": {
+      "error": "INVALID_REQUEST",
+      "message": "Request body is invalid",
+      "request_id": "00000000-0000-4000-8000-000000000005",
+      "documentation_url": "https://docs.example.com/api/v1/lens-journey/evaluate#INVALID_REQUEST"
+    }
+  }
+}

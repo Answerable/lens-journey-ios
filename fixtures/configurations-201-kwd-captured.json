@@ -1,0 +1,156 @@
+{
+  "_note": "POST /configurations then GET /configurations/:id for a KW/KWD catalogue tenant (US region). Prices come from the merchant store (faked at the HTTP boundary); the subtotal is a quote, the merchant cart charges. subtotal_paise is NOT sent for this market.",
+  "_captured": "local real route, 2026-11-06",
+  "request": {
+    "path": "/configurations",
+    "headers": {},
+    "body": {
+      "category": "non-prescription",
+      "session_id": "contract-00000000-0001",
+      "idempotency_key": "contract-attempt-0001",
+      "selections": [
+        {
+          "node_id": "vision",
+          "option_id": "anti-reflective"
+        },
+        {
+          "node_id": "index",
+          "option_id": "opt-ar-150"
+        },
+        {
+          "node_id": "colour",
+          "option_id": "opt-pfx-grey"
+        }
+      ]
+    }
+  },
+  "response": {
+    "status": 201,
+    "headers": {
+      "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+      "retry-after": null
+    },
+    "body": {
+      "success": true,
+      "id": "00000000-0000-4000-8000-000000000001",
+      "lens_summary": {
+        "family": null,
+        "index": "1.50",
+        "treatments": [],
+        "colour": null,
+        "text": "1.50"
+      },
+      "subtotal": "22.345",
+      "subtotal_minor": 22345,
+      "currency_decimals": 3,
+      "price_basis": "quote",
+      "price_basis_note": "Indicative quote. The merchant cart re-prices every line and is the charging authority; this configuration is never charged.",
+      "currency": "KWD",
+      "breakdown": [
+        {
+          "component": "anti-reflective",
+          "role": "routing",
+          "price_included": true,
+          "unit_price_minor": 0
+        },
+        {
+          "component": "opt-ar-150",
+          "role": "bundle",
+          "platform_sku": "LENS-AR-150-STOCK",
+          "unit_price_minor": 12345
+        },
+        {
+          "component": "opt-pfx-grey",
+          "role": "addon",
+          "platform_sku": "LENS-PHOTO-GREY",
+          "unit_price_minor": 10000
+        }
+      ],
+      "inherited_from_partner": false,
+      "prescription_on_file": false
+    }
+  },
+  "follow_up_get": {
+    "request": {
+      "path": "/configurations/00000000-0000-4000-8000-000000000001?session_id=contract-00000000-0001",
+      "headers": {}
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "cache-control": "no-store",
+        "retry-after": null
+      },
+      "body": {
+        "success": true,
+        "id": "00000000-0000-4000-8000-000000000001",
+        "selections": [
+          {
+            "label": "Anti-reflective",
+            "node_id": "vision",
+            "metadata": {},
+            "option_id": "anti-reflective"
+          },
+          {
+            "label": "AR 1.50",
+            "node_id": "index",
+            "metadata": {
+              "track": "stock",
+              "lens_index": "1.50"
+            },
+            "option_id": "opt-ar-150",
+            "platform_sku": "LENS-AR-150-STOCK"
+          },
+          {
+            "label": "Grey",
+            "node_id": "colour",
+            "metadata": {
+              "tint_type": "photochromic"
+            },
+            "option_id": "opt-pfx-grey",
+            "platform_sku": "LENS-PHOTO-GREY"
+          }
+        ],
+        "category": "non-prescription",
+        "vision_type": null,
+        "breakdown": [
+          {
+            "role": "routing",
+            "component": "anti-reflective",
+            "price_included": true,
+            "unit_price_minor": 0
+          },
+          {
+            "role": "bundle",
+            "component": "opt-ar-150",
+            "platform_sku": "LENS-AR-150-STOCK",
+            "unit_price_minor": 12345
+          },
+          {
+            "role": "addon",
+            "component": "opt-pfx-grey",
+            "platform_sku": "LENS-PHOTO-GREY",
+            "unit_price_minor": 10000
+          }
+        ],
+        "lens_summary": {
+          "family": null,
+          "index": "1.50",
+          "treatments": [],
+          "colour": null,
+          "text": "1.50"
+        },
+        "subtotal_minor": 22345,
+        "subtotal": "22.345",
+        "currency_decimals": 3,
+        "price_basis": "quote",
+        "price_basis_note": "Indicative quote. The merchant cart re-prices every line and is the charging authority; this configuration is never charged.",
+        "currency": "KWD",
+        "status": "draft",
+        "prescription": null,
+        "rx_photos": [],
+        "rx_photos_max": 1
+      }
+    }
+  }
+}

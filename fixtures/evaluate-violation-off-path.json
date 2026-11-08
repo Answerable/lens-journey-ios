@@ -1,0 +1,132 @@
+{
+  "_note": "A selection for a node the walk never visits is returned as a violation, not dropped.",
+  "_captured": "live test environment, 2026-10-28, throwaway tenant (deleted)",
+  "request": {
+    "path": "/evaluate",
+    "headers": {},
+    "body": {
+      "category": "single-vision",
+      "frame": {
+        "sku": "FIXTURE-SKU"
+      },
+      "prescription": {
+        "od": {
+          "sph": -1.5,
+          "cyl": -0.5,
+          "axis": 90
+        },
+        "os": {
+          "sph": -1.25,
+          "cyl": 0,
+          "axis": ""
+        },
+        "pd": 62
+      },
+      "selections": {
+        "vision-option": [
+          "anti-reflective"
+        ],
+        "ar-index": [
+          "opt-anti-reflective-150-stock"
+        ],
+        "not-a-real-node": [
+          "x"
+        ]
+      }
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "cache-control": "no-store",
+      "retry-after": null
+    },
+    "body": {
+      "success": true,
+      "workflow_version": "0000000000000001",
+      "category": "single-vision",
+      "terminal": "summary",
+      "step": null,
+      "selections": {
+        "vision-option": [
+          {
+            "optionId": "anti-reflective",
+            "optionLabel": "Anti-Reflective"
+          }
+        ],
+        "ar-index": [
+          {
+            "optionId": "opt-anti-reflective-150-stock",
+            "optionLabel": "Index 1.50"
+          }
+        ]
+      },
+      "auto_selected": [],
+      "violations": [
+        {
+          "code": "SELECTION_OFF_PATH",
+          "nodeId": "not-a-real-node"
+        }
+      ],
+      "prescription": {
+        "complete": true,
+        "errors": [],
+        "normalized": {
+          "od": {
+            "sph": "-1.50",
+            "cyl": "-0.50",
+            "axis": "90",
+            "add": ""
+          },
+          "os": {
+            "sph": "-1.25",
+            "cyl": "0.00",
+            "axis": "",
+            "add": ""
+          },
+          "pd": "62.00",
+          "pdOd": "",
+          "pdOs": ""
+        },
+        "ranges": {
+          "sph": {
+            "min": -30,
+            "max": 30,
+            "step": 0.25
+          },
+          "cyl": {
+            "min": -10,
+            "max": 10,
+            "step": 0.25
+          },
+          "add": {
+            "min": 0,
+            "max": 4,
+            "step": 0.25
+          },
+          "pd": {
+            "binocular": {
+              "min": 40,
+              "max": 90
+            },
+            "monocular": {
+              "min": 20,
+              "max": 45
+            }
+          },
+          "axis": {
+            "min": 1,
+            "max": 180,
+            "step": 1
+          }
+        }
+      },
+      "settings_warnings": [],
+      "gate": {
+        "decision": "pass",
+        "degraded": false,
+        "reason": "eligibility-call-skipped"
+      }
+    }
+  }
+}

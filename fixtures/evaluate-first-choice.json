@@ -1,0 +1,176 @@
+{
+  "_note": "First call with no selections: stops at the first choice.",
+  "_captured": "live test environment, 2026-10-28, throwaway tenant (deleted)",
+  "request": {
+    "path": "/evaluate",
+    "headers": {},
+    "body": {
+      "category": "single-vision",
+      "frame": {
+        "sku": "FIXTURE-SKU"
+      },
+      "prescription": {
+        "od": {
+          "sph": -1.5,
+          "cyl": -0.5,
+          "axis": 90
+        },
+        "os": {
+          "sph": -1.25,
+          "cyl": 0,
+          "axis": ""
+        },
+        "pd": 62
+      },
+      "selections": {}
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "cache-control": "no-store",
+      "retry-after": null
+    },
+    "body": {
+      "success": true,
+      "workflow_version": "0000000000000001",
+      "category": "single-vision",
+      "terminal": "choice",
+      "step": {
+        "id": "vision-option",
+        "type": "choice",
+        "label": "Lens Treatment",
+        "selection_mode": "single",
+        "options": [
+          {
+            "id": "anti-reflective",
+            "label": "Anti-Reflective",
+            "price": 0,
+            "msrp": 0,
+            "platform_sku": null,
+            "enabled": true,
+            "recommended": false,
+            "metadata": {
+              "description": "Reduces reflections and glare for clearer vision and a more transparent lens appearance. [[Anti-reflective coating, clear lenses]]",
+              "image_url": "https://assets.example.com/lens-treatments/anti-reflective.png"
+            }
+          },
+          {
+            "id": "blue-light",
+            "label": "Blue Light Filter",
+            "price": 0,
+            "msrp": 0,
+            "platform_sku": null,
+            "enabled": true,
+            "recommended": false,
+            "metadata": {
+              "description": "Built-in lens technology that blocks up to 40% of potentially harmful blue light while maintaining clear vision. [[Blue-light filter coating, capped at SPH +3]]",
+              "image_url": "https://assets.example.com/lens-treatments/blueshield.png"
+            }
+          },
+          {
+            "id": "photochromic",
+            "label": "Photochromic",
+            "price": 0,
+            "msrp": 0,
+            "platform_sku": null,
+            "enabled": true,
+            "recommended": false,
+            "metadata": {
+              "description": "Fast-adapting technology that changes from clear indoors to dark outdoors for comfortable vision in changing light conditions. [[Photochromic coating — always Rx, 4-day lead]]",
+              "image_url": "https://assets.example.com/lens-treatments/photochromic.png"
+            }
+          },
+          {
+            "id": "sunglasses",
+            "label": "Sunglasses",
+            "price": 0,
+            "msrp": 0,
+            "platform_sku": null,
+            "enabled": true,
+            "recommended": false,
+            "metadata": {
+              "description": "Tinted lenses that reduce brightness and glare for clear, comfortable outdoor vision with full UV protection. [[Pick a tint color in the next step.]]",
+              "image_url": "https://assets.example.com/lens-treatments/sunglasses.png"
+            }
+          },
+          {
+            "id": "polarized",
+            "label": "Polarized",
+            "price": 0,
+            "msrp": 0,
+            "platform_sku": null,
+            "enabled": true,
+            "recommended": false,
+            "metadata": {
+              "description": "Reduces intense glare from reflective surfaces and enhances contrast for clearer, more comfortable outdoor vision. [[Cuts glare from water, snow, roads.]]",
+              "image_url": "https://assets.example.com/lens-treatments/polarized.png"
+            }
+          }
+        ]
+      },
+      "selections": {},
+      "auto_selected": [],
+      "violations": [],
+      "prescription": {
+        "complete": true,
+        "errors": [],
+        "normalized": {
+          "od": {
+            "sph": "-1.50",
+            "cyl": "-0.50",
+            "axis": "90",
+            "add": ""
+          },
+          "os": {
+            "sph": "-1.25",
+            "cyl": "0.00",
+            "axis": "",
+            "add": ""
+          },
+          "pd": "62.00",
+          "pdOd": "",
+          "pdOs": ""
+        },
+        "ranges": {
+          "sph": {
+            "min": -30,
+            "max": 30,
+            "step": 0.25
+          },
+          "cyl": {
+            "min": -10,
+            "max": 10,
+            "step": 0.25
+          },
+          "add": {
+            "min": 0,
+            "max": 4,
+            "step": 0.25
+          },
+          "pd": {
+            "binocular": {
+              "min": 40,
+              "max": 90
+            },
+            "monocular": {
+              "min": 20,
+              "max": 45
+            }
+          },
+          "axis": {
+            "min": 1,
+            "max": 180,
+            "step": 1
+          }
+        }
+      },
+      "settings_warnings": [],
+      "gate": {
+        "decision": "pass",
+        "degraded": false,
+        "reason": "eligibility-call-skipped"
+      }
+    }
+  }
+}

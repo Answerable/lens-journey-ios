@@ -1,0 +1,26 @@
+{
+  "_note": "Invalid X-Client-Id.",
+  "_captured": "live test environment, 2026-10-28, throwaway tenant (deleted)",
+  "request": {
+    "path": "/evaluate",
+    "headers": {
+      "X-Client-Id": "bad id!"
+    },
+    "body": {
+      "category": "single-vision"
+    }
+  },
+  "response": {
+    "status": 400,
+    "headers": {
+      "cache-control": "no-store",
+      "retry-after": null
+    },
+    "body": {
+      "error": "INVALID_CLIENT_ID",
+      "message": "X-Client-Id must be 8 to 64 URL-safe characters",
+      "request_id": "00000000-0000-4000-8000-000000000004",
+      "documentation_url": "https://docs.example.com/api/v1/lens-journey/evaluate#INVALID_CLIENT_ID"
+    }
+  }
+}

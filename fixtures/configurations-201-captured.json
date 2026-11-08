@@ -1,0 +1,55 @@
+{
+  "_note": "CAPTURED FROM THE REAL SERVER CODE AND DATABASE: the 201 of POST /api/v1/lens-journey/configurations, from the real router and configuration service against a real Postgres, with a throwaway India-market tenant, a one-step published workflow and a price-book row. Names, ids and prices were replaced with neutral example values. Note `subtotal` is a decimal STRING (\"45000.00\"), `subtotal_paise` is an integer. The request is the body the SDKs send from finish(): selections as {node_id, option_id}, the frame SKU in product_sku.",
+  "_captured": "real route and a real database, 2026-11-05",
+  "request": {
+    "path": "/configurations",
+    "headers": {},
+    "body": {
+      "category": "non-prescription",
+      "selections": [
+        {
+          "node_id": "lens-index",
+          "option_id": "opt-priced"
+        }
+      ],
+      "session_id": "fixture-session-0001",
+      "vision_type": "distance",
+      "product_sku": "FIXTURE-FRAME-SKU-1",
+      "idempotency_key": "fixture-attempt-0001"
+    }
+  },
+  "response": {
+    "status": 201,
+    "headers": {
+      "cache-control": null,
+      "retry-after": null
+    },
+    "body": {
+      "success": true,
+      "id": "00000000-0000-4000-8000-000000000001",
+      "lens_summary": {
+        "family": "Example Progressive Lens",
+        "index": "1.5",
+        "treatments": [],
+        "colour": null,
+        "text": "1.5"
+      },
+      "subtotal": "45000.00",
+      "subtotal_paise": 4500000,
+      "currency": "INR",
+      "breakdown": [
+        {
+          "component": "opt-priced",
+          "product_name": "Example Progressive Lens",
+          "lens_index": "1.5",
+          "coating": "Example Coating",
+          "price_list_version": "2026-04",
+          "unit_price_paise": 4500000,
+          "intl_order_only": false
+        }
+      ],
+      "inherited_from_partner": false,
+      "prescription_on_file": false
+    }
+  }
+}

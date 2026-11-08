@@ -1,0 +1,24 @@
+{
+  "_note": "CAPTURED FROM THE REAL SERVER CODE: the response of POST /api/v1/lens-journey/rx-ocr, produced by the real router and the real normaliser. Only the model call, the database insert and the storage write were stubbed (they need a provider, a database and a bucket), so the OCR text the stub returned is synthetic; the response shape, the string values and the confidence token come from the server code. `upload_capability` (a signed token, present only when the server holds a signing secret) is removed. A backend contract test fails when the route output drifts from this file.",
+  "_captured": "local run of the real router, 2026-11-05",
+  "request": {
+    "path": "/rx-ocr",
+    "headers": {
+      "Content-Type": "multipart/form-data"
+    },
+    "body": "<multipart field image: JPEG bytes>"
+  },
+  "response": {
+    "status": 422,
+    "headers": {
+      "cache-control": null,
+      "retry-after": null
+    },
+    "body": {
+      "success": false,
+      "error": "Could not read prescription values",
+      "code": "OCR_NO_DATA",
+      "prescription_id": "c0000000-0000-4000-8000-000000000003"
+    }
+  }
+}
