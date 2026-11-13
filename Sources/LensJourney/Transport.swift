@@ -1,6 +1,6 @@
 import Foundation
 
-public struct TransportRequest: Sendable {
+public struct TransportRequest: Sendable, CustomStringConvertible {
     public let method: String
     public let path: String
     public let headers: [String: String]
@@ -10,6 +10,9 @@ public struct TransportRequest: Sendable {
     public init(method: String, path: String, headers: [String: String] = [:], body: Data? = nil, contentType: String? = nil) {
         self.method = method; self.path = path; self.headers = headers; self.body = body; self.contentType = contentType
     }
+
+    /// Header values carry the mobile key and the install token, so only the header names are printed.
+    public var description: String { "TransportRequest(\(method) \(path), headers: \(headers.keys.sorted()), body: \(body?.count ?? 0) bytes)" }
 }
 
 public struct TransportResponse: Sendable {

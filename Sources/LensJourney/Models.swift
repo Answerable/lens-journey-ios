@@ -253,7 +253,7 @@ enum ExactDecimal {
 }
 
 public struct LensJourneyError: Error, Equatable, Sendable {
-    public enum Kind: Equatable, Sendable { case invalidClientId, invalidRequest, unauthorized, insufficientScope, workflowNotPublished, payloadTooLarge, unsupportedMediaType, unprocessable, rateLimited, unavailable, network, requestTooLarge, invalidState, invalidImage, busy, invalidSelection, journeyIncomplete, malformedResponse }
+    public enum Kind: Equatable, Sendable { case invalidClientId, invalidRequest, unauthorized, insufficientScope, workflowNotPublished, payloadTooLarge, unsupportedMediaType, unprocessable, rateLimited, unavailable, network, requestTooLarge, invalidState, invalidImage, busy, invalidSelection, journeyIncomplete, malformedResponse, invalidConfiguration, attestationFailed, mobileChannelDisabled }
     public let kind: Kind; public let code: String?; public let message: String; public let details: JSONValue?; public let requestId: String?; public let documentationURL: String?
     public init(kind: Kind, code: String? = nil, message: String, details: JSONValue? = nil, requestId: String? = nil, documentationURL: String? = nil) { self.kind = kind; self.code = code; self.message = message; self.details = details; self.requestId = requestId; self.documentationURL = documentationURL }
 }

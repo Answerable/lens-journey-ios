@@ -2,7 +2,7 @@ import Foundation
 
 public actor LensJourney {
     /// The SDK version. Keep it equal to `VERSION` and the newest `##` heading in `CHANGELOG.md` (the release version check compares all three).
-    public static let version = "0.2.0"
+    public static let version = "0.3.0"
     public typealias Sleeper = @Sendable (UInt64) async throws -> Void
     public typealias Clock = @Sendable () -> Date
     private let config: JourneyConfig
@@ -218,7 +218,7 @@ private extension JourneyState {
     }
 }
 
-private struct ErrorEnvelope: Decodable {
+struct ErrorEnvelope: Decodable {
     var error: String? = nil; var message: String? = nil; var code: String? = nil; var details: JSONValue? = nil; var requestId: String? = nil; var documentationURL: String? = nil
     enum CodingKeys: String, CodingKey { case error, message, code, details; case requestId = "request_id"; case documentationURL = "documentation_url" }
 }

@@ -225,8 +225,8 @@ final class SubtotalAndBrandTests: XCTestCase {
         for request in await transport.requests { XCTAssertEqual(try jsonObject(request.body)["brand"] as? String, "brandb") }
     }
 
-    func testVersionIsZeroPointTwoPointZeroAndMatchesVersionFileAndChangelog() throws {
-        XCTAssertEqual(LensJourney.version, "0.2.0")
+    func testVersionIsZeroPointThreePointZeroAndMatchesVersionFileAndChangelog() throws {
+        XCTAssertEqual(LensJourney.version, "0.3.0")
         let root = sdkPackageRoot()
         let versionFile = try String(contentsOf: root.appendingPathComponent("VERSION"), encoding: .utf8).trimmingCharacters(in: .whitespacesAndNewlines)
         XCTAssertEqual(versionFile, LensJourney.version, "VERSION must equal LensJourney.version")

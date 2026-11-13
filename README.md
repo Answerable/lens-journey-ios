@@ -1,20 +1,47 @@
 # LensJourney for Swift
 
-> **Pre-release (0.x).** The API can still change without notice. Pin an exact version.
+> **Pre-release (0.x), unpublished.** The API can still change without notice. Pin an exact version.
 
-`LensJourney` is a Foundation-only Swift package for Commerce Studio's server-driven lens journey. It requires iOS 15 or macOS 12 and Swift 5.9. The SDK contains no API secret and no lens rules: the host supplies a `Transport`, or uses `URLSessionTransport` with its own authenticated proxy URL and header provider.
+`LensJourney` is a Foundation-only Swift package for Commerce Studio's server-driven lens journey. It requires iOS 15 or macOS 12 and Swift 5.9. The SDK contains no lens rules and no API secret.
+
+**How the app is authenticated (0.3.0).** The app talks to VARAi directly, with an attested mobile publishable key (`cspk_...`). The merchant's platform prices the cart: the app hands the journey result (`configuration id` and `sessionId`) to the merchant's cart, and the merchant's platform prices it from its own catalogue (ADR-369). The app never prices anything and never holds a secret key. A secret key (`cs_...`) must never ship in an app, and the SDK refuses one.
 
 ```swift
-// URLSessionTransport throws for a non-https base URL (pass allowInsecureHTTP: true only in a debug build, e.g. http://localhost).
-let transport = try URLSessionTransport(baseURL: URL(string: "https://shop.example.com/lens-proxy/")!) {
-    ["Authorization": "Bearer \(await appSession.token)"]
-}
-let config = try JourneyConfig(clientId: stableInstallID, currency: "USD", store: "us")
-let journey = LensJourney(config: config, transport: transport)
+// The mobile key comes from your VARAi dashboard. MobileKeyConfig refuses a secret cs_ key and anything that is not cspk_.
+let mobile = try MobileKeyConfig(
+    mobileKey: appMobileKey,                       // "cspk_..."
+    baseURL: apiBaseURL,                           // the VARAi API URL for your environment (https)
+    attestationProvider: AppAttestProvider(),      // DebugAttestationProvider() only against a staging server
+    installIdStore: UserDefaultsInstallIdStore()   // keep the install id across launches
+)
+let journey = try LensJourney.mobile(config: try JourneyConfig(currency: "USD", store: "us"), mobileKey: mobile)
 var state = try await journey.start(category: "single-vision", frame: FrameRef(sku: "FRAME-1"), vision: .distance)
 state = try await journey.select(optionId: "anti-reflective")
-let final = try await journey.finish() // final.id is the configuration the host carries to its cart
+let final = try await journey.finish() // final.id is the configuration id the app gives to the merchant's cart
 ```
+
+## Mobile key, attestation and install tokens
+
+> **Needs the server side.** The mobile channel is off by default on the VARAi API (`403 MOBILE_CHANNEL_DISABLED`, typed as `.mobileChannelDisabled`) until VARAi enables it for your tenant and binds your app to a mobile key. Until then use the proxy transport below.
+
+A mobile key alone authorises nothing. `MobileKeyTransport` (what `LensJourney.mobile` uses) exchanges it for a short-lived **install token**:
+
+1. `POST /api/v1/lens-journey/install-nonce` with the install id gives a single-use nonce and a challenge that is bound to this install.
+2. The `AttestationProvider` proves the install is a genuine copy of your app over that challenge (App Attest on iOS).
+3. `POST /api/v1/lens-journey/install-token` exchanges the proof for an install token (valid for about an hour).
+4. Every journey call carries the token in `X-CS-Install-Token`. The mobile key is sent only on the two mint calls.
+
+The token is kept in memory and replaced about 5 minutes before it expires (half-way through a token that lives under 10 minutes). If that refresh fails while the old token still works, the old token is used. If the server answers `401` with code `INSTALL_TOKEN_INVALID` (revoked, or expired early) the SDK mints a new token once and retries that call once. Concurrent calls share one mint. If the refresh keeps failing, the SDK does not try again on every call: it waits 30 seconds (`MobileKeyTransport.refreshRetryDelay`) while the old token is still valid.
+
+**Install id.** A random id for one app installation, made on first use and kept in an `InstallIdStore`. The default `InMemoryInstallIdStore` forgets it on every launch, which means a new attestation on every launch (and a per-device cap you will hit). Use `UserDefaultsInstallIdStore` (removed with the app, like App Attest keys) or your own store.
+
+**`AppAttestProvider`** uses `DCAppAttestService` (iOS 14+). Enable the App Attest capability for your app. The first token for an install creates a key, attests it over the challenge and sends the attestation. The key id is kept in the Keychain only once the server has accepted it; every later token is a refresh that sends an assertion with that key. The server accepts a new attestation only for an install that has no accepted key yet, and answers every failure with the same `401 ATTESTATION_FAILED`. So the SDK recovers like this: a refused **first** attestation (for example an install id restored from a backup while its Keychain key stayed on the old device, or an accepted attestation whose answer was lost) starts a **new install** (a new install id) and mints once more in the same call; one refused **assertion** is tolerated and keeps the key, because it may be transient; a second refused assertion in a row also starts a new install. Each new install counts once against the per-key daily install cap when it is accepted. The hash App Attest signs is the SHA-256 of the UTF-8 challenge string. On a simulator, or anywhere App Attest is unsupported, it throws `LensJourneyError.Kind.attestationFailed` (code `ATTESTATION_UNAVAILABLE`); there is no fallback to a weaker proof.
+
+**`DebugAttestationProvider` is for staging only.** It sends the challenge back unsigned. A production VARAi server refuses a debug binding when it is issued and again when it is used, so it works only against staging, test or development servers. Use it for simulator runs and CI against staging, and never ship it in a release build (for example `#if DEBUG`).
+
+**Your own provider.** Implement `AttestationProvider.attest(challenge:installId:) async throws -> AttestationPayload`. The optional `attestationAccepted(installId:)`, `attestationRejected(installId:)` and `installIdReplaced(_:)` let a provider commit or drop state around the server's verdict: drop what you staged for a refused attempt, keep what the server already accepted, and drop everything for the old id when the SDK starts a new install.
+
+Attestation failures are typed: `LensJourneyError.Kind.attestationFailed` (code `ATTESTATION_FAILED`, from the provider or from a server `401`), `.mobileChannelDisabled` (`403 MOBILE_CHANNEL_DISABLED`) and `.invalidConfiguration` (`SECRET_KEY_IN_APP`, `INVALID_MOBILE_KEY`). The mint calls themselves are not retried; a `429` is `.rateLimited`. A device that fails attestation cannot start a journey: emulators and rooted devices are refused by design.
 
 Render every returned violation and prescription error. Treat a degraded gate as provisional. `finish()` is authoritative for price and eligibility; never invent a price from an error. The SDK retries 429 and 503 once, and reuses the same configuration idempotency key for that retry. The key also survives a `finish()` that failed (a surfaced 503 or a network error): calling `finish()` again with the same selections and prescription sends the same key, so the server does not create a second configuration. `start`, `select`, `back` and `setPrescription` start a new key.
 
@@ -36,6 +63,9 @@ Every `LensJourneyError` carries a `kind`. Errors the SDK raises itself (validat
 | A 2xx whose body cannot be decoded (evaluate, finish, scan) | `.malformedResponse` (`MALFORMED_RESPONSE`) | `MalformedResponseException` (`MALFORMED_RESPONSE`) |
 | Client-side validation (lengths, limits) | `.invalidRequest` (`INVALID_REQUEST`) | `InvalidRequestException` (`INVALID_REQUEST`) |
 | Transport failure | `.network` (`NETWORK_ERROR`) | `NetworkException` (`NETWORK_ERROR`) |
+| A secret `cs_` key, or a key that is not `cspk_` | `.invalidConfiguration` (`SECRET_KEY_IN_APP`, `INVALID_MOBILE_KEY`) | `InvalidConfigurationException` (same codes) |
+| The provider cannot attest, or the server refuses the attestation (`401`) | `.attestationFailed` (`ATTESTATION_FAILED`, `ATTESTATION_UNAVAILABLE`) | `AttestationException` (same codes) |
+| `403 MOBILE_CHANNEL_DISABLED` on a mint | `.mobileChannelDisabled` | `MobileChannelDisabledException` |
 
 A malformed 2xx commits nothing: the journey state, picks and history are as they were, and the operation lock is released. `scanPrescription` takes the same exclusive lock as the other stateful calls, so it fails with `.busy` while another call is in flight (and the other calls fail with `.busy` while a scan is).
 
@@ -56,14 +86,14 @@ A 2xx body that cannot be decoded (for example a `subtotal` that is neither a de
 
 `JourneyConfig(brand:)` is optional and takes a brand code the server knows (for example `"ACME"`). It must match the server's rule, a letter followed by up to 31 letters or digits after trimming (the server compares case-insensitively); anything else throws `.invalidRequest` from the initializer, and the trimmed value is what is sent. When set, the SDK sends `brand` on every `/evaluate` call and on the `/configurations` call made by `finish()`, so the server picks that brand's workflow. When nil it sends no `brand` field and behaviour is unchanged.
 
-`LensJourney.version` is the SDK version (`"0.2.0"`).
+`LensJourney.version` is the SDK version (`"0.3.0"`).
 
 ## Distribution
 
 Add the package by URL and pin an exact version while the API is `0.x`; commit Xcode's `Package.resolved`:
 
 ```swift
-.package(url: "https://github.com/Answerable/lens-journey-ios.git", exact: "0.2.0")
+.package(url: "https://github.com/Answerable/lens-journey-ios.git", exact: "0.3.0")
 ```
 
 ## Changelog
@@ -72,7 +102,44 @@ See [CHANGELOG.md](CHANGELOG.md).
 
 ## Environments
 
-The app only ever talks to the merchant's proxy (`baseURL` above). The proxy decides which VARAi environment it calls. The API key the proxy holds must belong to that same environment, or every call returns 401. `currency` and `store` in `JourneyConfig` must match the tenant (for example a merchant selling in Kuwaiti dinar uses `currency: "KWD"`), the SDK does not check them. The SDK has no environment switch of its own.
+`MobileKeyConfig.baseURL` selects the VARAi environment, and the mobile key must belong to that same environment, or every mint returns 401. There is no default base URL: pass the one for your environment. `currency` and `store` in `JourneyConfig` must match the tenant (for example a merchant selling in Kuwaiti dinar uses `currency: "KWD"`), the SDK does not check them. The SDK has no environment switch of its own.
+
+## Handing the result to the merchant's cart
+
+`finish()` returns a `LensConfiguration`. Its `id` is the configuration id; the session is `JourneyConfig.sessionId`. The app passes **only those two ids** (plus the frame and quantity) to the merchant's cart, and never a price: `subtotal` is an indicative quote for display, and the merchant's platform prices the line from its own catalogue (ADR-369). The platform reserves the configuration with VARAi, so a configuration cannot be used by two carts or by another shopper's session.
+
+### Magento
+
+Once the merchant's Magento store runs the `CommerceStudio/LensJourney` module that adds the lens cart (it ships separately from this SDK and is not in every store yet; the endpoints exist only with it, behind the store setting `commerce_studio_lens_journey/general/lens_cart_reserve_enabled`, off by default), it exposes:
+
+- `POST /rest/V1/commerce-studio/lens-journey/cart` with the shopper's customer token (resource `self`).
+- `POST /rest/V1/commerce-studio/lens-journey/guest-carts/{cartId}/items` for a guest, with the masked cart id.
+
+```swift
+struct LensCartLine: Encodable { let sku: String; let qty: Int; let configuration_id: String; let session_id: String }
+
+var request = URLRequest(url: merchantBase.appendingPathComponent("rest/V1/commerce-studio/lens-journey/cart"))
+request.httpMethod = "POST"
+request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+request.setValue("Bearer \(customerToken)", forHTTPHeaderField: "Authorization")
+request.httpBody = try JSONEncoder().encode(LensCartLine(sku: "FRAME-1", qty: 1, configuration_id: final.id, session_id: sessionId))
+```
+
+The body is `{ "sku" | "product_id": ..., "qty": ..., "configuration_id": ..., "session_id": ... }`. Any price in the body is ignored. Magento reserves the configuration, prices the frame and the lens products from its own catalogue and adds the line; if the reservation or the pricing fails, nothing is added and the shopper gets an error. When the order is placed, Magento confirms the configuration and carries the lens details onto the order.
+
+## Compatibility: the proxy transport (deprecated)
+
+> **Deprecated.** The 0.2 model, where the app talks only to a merchant-run proxy that holds a secret key, still works but is deprecated. Prefer the mobile key. A proxy must be a server you run; the secret key must never reach the app.
+
+`URLSessionTransport` with your own proxy URL and header provider keeps working unchanged:
+
+```swift
+// URLSessionTransport throws for a non-https base URL (pass allowInsecureHTTP: true only in a debug build, e.g. http://localhost).
+let transport = try URLSessionTransport(baseURL: URL(string: "https://shop.example.com/lens-proxy/")!) {
+    ["Authorization": "Bearer \(await appSession.token)"]
+}
+let journey = LensJourney(config: try JourneyConfig(clientId: stableInstallID), transport: transport)
+```
 
 ## Prescription capture
 

@@ -1,0 +1,25 @@
+{
+  "_note": "The configuration is already reserved to a different cart line.",
+  "_captured": "local real route and a real Postgres, 2026-11-12",
+  "request": {
+    "path": "/configurations/00000000-0000-4000-8000-0000000000a1/reserve",
+    "headers": {},
+    "body": {
+      "session_id": "contract-session-0001",
+      "cart_ref": "cart-100:line-2",
+      "quantity": 2
+    }
+  },
+  "response": {
+    "status": 409,
+    "headers": {
+      "cache-control": "no-store"
+    },
+    "body": {
+      "error": "CONFIGURATION_ALREADY_RESERVED",
+      "message": "The configuration is already reserved to a different cart line",
+      "request_id": "00000000-0000-4000-8000-0000000000b1",
+      "documentation_url": "https://docs.example.com/api/v1/lens-journey/configurations#CONFIGURATION_ALREADY_RESERVED"
+    }
+  }
+}

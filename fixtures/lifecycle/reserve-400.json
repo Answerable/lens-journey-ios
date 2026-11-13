@@ -1,0 +1,25 @@
+{
+  "_note": "A malformed body: cart_ref must match ^[A-Za-z0-9:_-]{1,128}$, quantity an integer 1 to 20.",
+  "_captured": "local real route and a real Postgres, 2026-11-12",
+  "request": {
+    "path": "/configurations/00000000-0000-4000-8000-0000000000a1/reserve",
+    "headers": {},
+    "body": {
+      "session_id": "contract-session-0001",
+      "cart_ref": "not valid",
+      "quantity": 1
+    }
+  },
+  "response": {
+    "status": 400,
+    "headers": {
+      "cache-control": "no-store"
+    },
+    "body": {
+      "error": "INVALID_REQUEST",
+      "message": "cart_ref must match ^[A-Za-z0-9:_-]{1,128}$",
+      "request_id": "00000000-0000-4000-8000-0000000000b1",
+      "documentation_url": "https://docs.example.com/api/v1/lens-journey/configurations#INVALID_REQUEST"
+    }
+  }
+}
