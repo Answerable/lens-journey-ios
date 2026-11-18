@@ -42,9 +42,9 @@ final class MobileKeyTransportTests: XCTestCase {
     }
 
     func testANonHTTPSBaseURLIsRefusedUnlessAllowedForDebug() throws {
-        let c = try MobileKeyConfig(mobileKey: "cspk_live_abc123", baseURL: URL(string: "http://localhost:3000")!, attestationProvider: DebugAttestationProvider())
+        let c = try MobileKeyConfig(mobileKey: "cspk_live_abc123", baseURL: URL(string: "http://localhost:3000")!, attestationProvider: EchoChallengeProvider())
         XCTAssertThrowsError(try MobileKeyTransport(config: c)) { XCTAssertEqual(($0 as? LensJourneyError)?.code, "INSECURE_BASE_URL") }
-        let ok = try MobileKeyConfig(mobileKey: "cspk_live_abc123", baseURL: URL(string: "http://localhost:3000")!, attestationProvider: DebugAttestationProvider(), allowInsecureHTTP: true)
+        let ok = try MobileKeyConfig(mobileKey: "cspk_live_abc123", baseURL: URL(string: "http://localhost:3000")!, attestationProvider: EchoChallengeProvider(), allowInsecureHTTP: true)
         XCTAssertNoThrow(try MobileKeyTransport(config: ok))
     }
 
@@ -539,8 +539,20 @@ final class MobileKeyTransportTests: XCTestCase {
 
     // MARK: debug provider
 
+    #if DEBUG
     func testTheDebugProviderEchoesTheChallengeAndNothingElse() async throws {
         let payload = try await DebugAttestationProvider().attest(challenge: "abc", installId: "install-id-000001")
+        XCTAssertEqual(payload, .debug(challenge: "abc"))
+    }
+    #endif
+
+    // The absence of `DebugAttestationProvider` from a Release build is proved on the built objects by
+    // scripts/check-release-has-no-debug-provider.sh (a runtime lookup by name cannot show it), and the test target builds and runs in a Release
+    // configuration (`swift test -c release -Xswiftc -enable-testing`) because nothing outside `#if DEBUG` names the type.
+
+    func testTheEchoChallengeTestProviderMatchesWhatTheDebugProviderSends() async throws {
+        // The tests' own stand-in (used where a provider is needed but not the SDK's debug type) sends the same `.debug` payload.
+        let payload = try await EchoChallengeProvider().attest(challenge: "abc", installId: "install-id-000001")
         XCTAssertEqual(payload, .debug(challenge: "abc"))
     }
 
@@ -561,7 +573,7 @@ final class MobileKeyTransportTests: XCTestCase {
 
     // MARK: helpers
 
-    private func config(key: String, provider: AttestationProvider = DebugAttestationProvider(), store: InstallIdStore = InMemoryInstallIdStore()) throws -> MobileKeyConfig {
+    private func config(key: String, provider: AttestationProvider = EchoChallengeProvider(), store: InstallIdStore = InMemoryInstallIdStore()) throws -> MobileKeyConfig {
         try MobileKeyConfig(mobileKey: key, baseURL: base, attestationProvider: provider, installIdStore: store)
     }
 
@@ -660,4 +672,11 @@ private actor StubServer: Transport {
         let f = ISO8601DateFormatter(); f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         return f.string(from: date)
     }
+}
+
+
+/// A test double that answers an attestation challenge with the unsigned `.debug` payload, like the SDK's DEBUG-only `DebugAttestationProvider`,
+/// but defined here so the tests build and run in a Release configuration too.
+struct EchoChallengeProvider: AttestationProvider {
+    func attest(challenge: String, installId: String) async throws -> AttestationPayload { .debug(challenge: challenge) }
 }

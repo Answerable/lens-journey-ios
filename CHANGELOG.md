@@ -2,6 +2,10 @@
 
 All notable changes to the Lens Journey Swift SDK. Versions are `0.x`: the API can change in a minor release (see the README).
 
+## Unreleased
+
+- **Breaking, source:** `DebugAttestationProvider` is compiled only under `#if DEBUG`. It no longer exists in a Release build of the package, so an app cannot ship its symbol by accident (a release gate that scans the binary can now pass). Code that names it outside a Debug build stops compiling: write your own `AttestationProvider` that returns `.debug(challenge:)` (three lines) behind your own build flag. `AttestationPayload.debug` is unchanged. No version bump or tag in this change.
+
 ## 0.3.0 (pre-release 0.x, unpublished)
 
 - **New, the headline:** the app can talk to VARAi directly with an attested mobile publishable key (`cspk_...`) instead of through a merchant proxy. The merchant's platform prices the cart; the app only passes the configuration id and the session id (ADR-369).

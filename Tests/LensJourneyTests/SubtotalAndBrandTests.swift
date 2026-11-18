@@ -231,7 +231,8 @@ final class SubtotalAndBrandTests: XCTestCase {
         let versionFile = try String(contentsOf: root.appendingPathComponent("VERSION"), encoding: .utf8).trimmingCharacters(in: .whitespacesAndNewlines)
         XCTAssertEqual(versionFile, LensJourney.version, "VERSION must equal LensJourney.version")
         let changelog = try String(contentsOf: root.appendingPathComponent("CHANGELOG.md"), encoding: .utf8)
-        let newest = changelog.split(separator: "\n").first { $0.hasPrefix("## ") }.map { $0.dropFirst(3).split(separator: " ").first.map(String.init) ?? "" }
+        // An `## Unreleased` section may sit above the current version while a change waits for its release.
+        let newest = changelog.split(separator: "\n").first { $0.hasPrefix("## ") && !$0.hasPrefix("## Unreleased") }.map { $0.dropFirst(3).split(separator: " ").first.map(String.init) ?? "" }
         XCTAssertEqual(newest, LensJourney.version, "the newest CHANGELOG.md heading must carry the current version")
     }
 }

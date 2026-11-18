@@ -96,9 +96,16 @@ public extension AttestationProvider {
     func installIdReplaced(_ oldInstallId: String) async {}
 }
 
-/// Staging-only. It sends the server's challenge back unsigned. A production VARAi server refuses a `debug` binding at issue time
-/// and at use time, so this provider can only ever work against staging, test or development servers. Never ship it in a release build.
+#if DEBUG
+/// Staging-only, and compiled ONLY into DEBUG builds. It sends the server's challenge back unsigned. A production VARAi server refuses a
+/// `debug` binding at issue time and at use time, so this provider can only ever work against staging, test or development servers.
+///
+/// The type does not exist in a Release build of this package, so an app that links the SDK cannot ship it by accident: code that names it in a
+/// Release configuration does not compile, and the symbol is not in the binary. If you need an unsigned debug attestation in a non-Debug build
+/// (for example a staging TestFlight build), write a three-line `AttestationProvider` that returns `.debug(challenge:)` in YOUR app, behind your
+/// own build flag. `AttestationPayload.debug` itself stays public.
 public struct DebugAttestationProvider: AttestationProvider {
     public init() {}
     public func attest(challenge: String, installId: String) async throws -> AttestationPayload { .debug(challenge: challenge) }
 }
+#endif
