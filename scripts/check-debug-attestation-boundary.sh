@@ -6,6 +6,10 @@
 #      `DebugAttestationProvider()`, forging a `RestrictedAttestation` and reading one all fail to compile, each for the expected reason. A control
 #      target using the core product compiles, so a failure is the access rule and not a broken fixture.
 #   3. An app that links the opt-in product `LensJourneyDebugAttestation` builds and runs in Debug AND Release.
+#   4. The same boundary for an Xcode-PROJECT iOS app (xcodebuild, iOS Simulator): a "production" app target linking only LensJourney builds and its
+#      Release binary has no DebugAttestationProvider; naming the provider or forging a RestrictedAttestation there fails to build; a "staging" app
+#      target that also links LensJourneyDebugAttestation builds in Debug and Release and its Release binary contains the provider.
+#      Needs xcodegen, Xcode with an iOS Simulator SDK, and about 1-2 GB of temp space (DerivedData lives in the temp dir and is deleted on exit).
 #   scripts/check-debug-attestation-boundary.sh
 set -uo pipefail
 repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -51,4 +55,32 @@ for cfg in debug release; do
   o="$( cd "$work/fixture" && swift run -c "$cfg" --scratch-path "$work/fx-scratch-$cfg" DebugLinked 2>&1 )"
   if grep -qx 'AttestationPayload.restricted(<redacted>)' <<<"$o"; then pass "app linking LensJourneyDebugAttestation builds and runs in $cfg"; else bad "linked debug product does not work in $cfg"; echo "$o" | tail -5; fi
 done
+# --- 4. Xcode-project iOS app, iOS Simulator ----------------------------------------------------------------------------------------
+command -v xcodegen >/dev/null && command -v xcodebuild >/dev/null || { echo "part 4 needs xcodegen and xcodebuild"; exit 2; }
+cp -R "$repo/scripts/xcode-fixture" "$work/xcode-fixture"
+( cd "$work/xcode-fixture" && xcodegen generate --quiet >/dev/null 2>&1 ) || { echo "xcodegen could not generate the fixture project"; exit 2; }
+xb() { # <scheme> <configuration> -> output on stdout, status of xcodebuild
+  ( cd "$work/xcode-fixture" && xcodebuild -project BoundaryFixture.xcodeproj -scheme "$1" -configuration "$2" -destination 'generic/platform=iOS Simulator' \
+      -derivedDataPath "$work/dd" CODE_SIGNING_ALLOWED=NO build 2>&1 )
+}
+app_bin() { echo "$work/dd/Build/Products/Release-iphonesimulator/$1.app/$1"; }
+# (a here-string, not a pipe: with pipefail, `grep -q` closing the pipe early makes `strings` fail and the check would always read as "absent")
+has_provider() { local t; t="$(strings -a "$1")"; grep -q 'DebugAttestationProvider' <<<"$t"; }
+o="$(xb ProductionApp Release)" && pass "Xcode project: production app (core product only) builds for the iOS Simulator in Release" || { bad "production app does not build"; echo "$o" | grep error: | head -3; }
+o="$(xb ProductionApp Debug)" && pass "Xcode project: production app builds in Debug" || { bad "production app does not build in Debug"; echo "$o" | grep error: | head -3; }
+xcode_expect_fail() { # <scheme> <description> <required text>
+  local o rc; o="$(xb "$1" Release)"; rc=$?
+  if [ $rc -ne 0 ] && grep -q "$3" <<<"$o"; then pass "Xcode project: $2 does not build ($3)"
+  elif [ $rc -eq 0 ]; then bad "Xcode project: $2 BUILDS in the production target"
+  else bad "Xcode project: $2 failed, but not for the expected reason ($3)"; echo "$o" | grep error: | head -3; fi
+}
+xcode_expect_fail ProductionFailProvider "naming DebugAttestationProvider with only LensJourney linked" "cannot find 'DebugAttestationProvider' in scope"
+xcode_expect_fail ProductionFailRestricted "forging a RestrictedAttestation with only LensJourney linked" "inaccessible due to 'package' protection level"
+o="$(xb StagingApp Debug)" && pass "Xcode project: staging app (links LensJourneyDebugAttestation) builds in Debug" || { bad "staging app does not build in Debug"; echo "$o" | grep error: | head -3; }
+o="$(xb StagingApp Release)" && pass "Xcode project: staging app builds in Release" || { bad "staging app does not build in Release"; echo "$o" | grep error: | head -3; }
+prod_bin="$(app_bin ProductionApp)"; stg_bin="$(app_bin StagingApp)"
+if [ -f "$stg_bin" ] && [ -f "$prod_bin" ]; then
+  if has_provider "$stg_bin"; then pass "control: the staging app's Release binary contains DebugAttestationProvider"; else bad "control: the staging app's Release binary does not contain the symbol, so the check below proves nothing"; fi
+  if has_provider "$prod_bin"; then bad "the production app's Release binary contains DebugAttestationProvider"; else pass "the production app's Release binary has no DebugAttestationProvider"; fi
+else bad "Release app binaries not found ($prod_bin / $stg_bin)"; fi
 [ $fail = 0 ] && echo "ok" || { echo "FAILED"; exit 1; }
