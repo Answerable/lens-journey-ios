@@ -2,7 +2,7 @@ import Foundation
 
 public actor LensJourney {
     /// The SDK version. Keep it equal to `VERSION` and the newest `##` heading in `CHANGELOG.md` (the release version check compares all three).
-    public static let version = "0.3.0"
+    public static let version = "0.4.0"
     public typealias Sleeper = @Sendable (UInt64) async throws -> Void
     public typealias Clock = @Sendable () -> Date
     private let config: JourneyConfig

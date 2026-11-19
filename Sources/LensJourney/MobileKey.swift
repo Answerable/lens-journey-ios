@@ -55,22 +55,44 @@ public final class UserDefaultsInstallIdStore: InstallIdStore, @unchecked Sendab
 }
 
 /// The platform proof the server checks. The case decides which field of `POST /install-token` carries it.
+///
+/// This core product has no unsigned or "debug" proof, and no public way to make one. The `restricted` case exists so that a separate,
+/// opt-in product of this package (`LensJourneyDebugAttestation`) can hand the transport a proof of a kind the production product does not
+/// offer. Code outside this package cannot construct a `RestrictedAttestation`.
 public enum AttestationPayload: Equatable, Sendable, CustomStringConvertible {
     /// App Attest. Send `attestationObject` on the first issue for a key, or `assertion` on a refresh.
     case appAttest(keyId: String, attestationObject: Data?, assertion: Data?)
     /// A Play Integrity token (Android).
     case playIntegrity(token: String)
-    /// Staging and test servers only. A production server refuses it.
-    case debug(challenge: String)
+    /// A proof that only the opt-in `LensJourneyDebugAttestation` product can make. See `RestrictedAttestation`.
+    case restricted(RestrictedAttestation)
 
     /// Never prints the proof, the token or the challenge.
     public var description: String {
         switch self {
         case .appAttest: return "AttestationPayload.appAttest(<redacted>)"
         case .playIntegrity: return "AttestationPayload.playIntegrity(<redacted>)"
-        case .debug: return "AttestationPayload.debug(<redacted>)"
+        case .restricted: return "AttestationPayload.restricted(<redacted>)"
         }
     }
+}
+
+/// A proof that the core product cannot make. It is opaque and has no public initializer: its fields and its initializer use the `package`
+/// access level, so only targets of this Swift package (the core product and `LensJourneyDebugAttestation`) can create or read one. An app
+/// that depends on the package from outside it cannot name the initializer, so it cannot forge one.
+///
+/// As a second line of defence the transport sends a restricted proof only if it was created in a source file of the
+/// `LensJourneyDebugAttestation` module (`#fileID`); anything else is refused with `ATTESTATION_PAYLOAD_NOT_ALLOWED` and nothing is sent.
+public struct RestrictedAttestation: Equatable, Sendable, CustomStringConvertible {
+    /// The only module whose proofs the transport will send.
+    package static let allowedOriginPrefix = "LensJourneyDebugAttestation/"
+    package let field: String
+    package let value: [String: String]
+    package let origin: String
+    package init(field: String, value: [String: String], origin: String = #fileID) {
+        self.field = field; self.value = value; self.origin = origin
+    }
+    public var description: String { "RestrictedAttestation(<redacted>)" }
 }
 
 /// Produces the proof that this is a genuine install of the app. `challenge` comes from the server (bound to the install id);
@@ -95,17 +117,3 @@ public extension AttestationProvider {
     func attestationRejected(installId: String) async {}
     func installIdReplaced(_ oldInstallId: String) async {}
 }
-
-#if DEBUG
-/// Staging-only, and compiled ONLY into DEBUG builds. It sends the server's challenge back unsigned. A production VARAi server refuses a
-/// `debug` binding at issue time and at use time, so this provider can only ever work against staging, test or development servers.
-///
-/// The type does not exist in a Release build of this package, so an app that links the SDK cannot ship it by accident: code that names it in a
-/// Release configuration does not compile, and the symbol is not in the binary. If you need an unsigned debug attestation in a non-Debug build
-/// (for example a staging TestFlight build), write a three-line `AttestationProvider` that returns `.debug(challenge:)` in YOUR app, behind your
-/// own build flag. `AttestationPayload.debug` itself stays public.
-public struct DebugAttestationProvider: AttestationProvider {
-    public init() {}
-    public func attest(challenge: String, installId: String) async throws -> AttestationPayload { .debug(challenge: challenge) }
-}
-#endif
