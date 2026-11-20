@@ -69,7 +69,7 @@ public final class KeychainAppAttestKeyStore: AppAttestKeyStore, @unchecked Send
 /// `clientDataHash` is the SHA-256 of the UTF-8 bytes of the challenge string the server returned from `install-nonce`.
 ///
 /// On a simulator or any device where App Attest is not supported, `attest` throws `LensJourneyError(kind: .attestationFailed,
-/// code: "ATTESTATION_UNAVAILABLE")` without calling Apple. Use `DebugAttestationProvider` against a staging server there.
+/// code: "ATTESTATION_UNAVAILABLE")` without calling Apple. For a staging server there, link the opt-in `LensJourneyDebugAttestation` product and use its `DebugAttestationProvider`.
 public actor AppAttestProvider: AttestationProvider {
     private let client: AppAttestClient
     private let keyStore: AppAttestKeyStore

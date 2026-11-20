@@ -1,5 +1,6 @@
 import XCTest
 @testable import LensJourney
+import LensJourneyDebugAttestation
 
 final class MobileKeyTransportTests: XCTestCase {
     private let base = URL(string: "https://shop.example.com")!
@@ -537,11 +538,33 @@ final class MobileKeyTransportTests: XCTestCase {
         for secret in ["key-secret-1", "tok-secret", "chal-secret", "pi-secret", "key-secret"] { XCTAssertFalse(text.contains(secret), secret) }
     }
 
-    // MARK: debug provider
+    // MARK: debug attestation lives only in the opt-in LensJourneyDebugAttestation product
 
     func testTheDebugProviderEchoesTheChallengeAndNothingElse() async throws {
         let payload = try await DebugAttestationProvider().attest(challenge: "abc", installId: "install-id-000001")
-        XCTAssertEqual(payload, .debug(challenge: "abc"))
+        XCTAssertEqual(payload, DebugAttestationProvider.payload(challenge: "abc"))
+        guard case let .restricted(proof) = payload else { return XCTFail("expected a restricted payload") }
+        XCTAssertEqual(proof.field, "debug"); XCTAssertEqual(proof.value, ["challenge": "abc"])
+        XCTAssertTrue(proof.origin.hasPrefix("LensJourneyDebugAttestation/"), proof.origin)
+    }
+
+    /// A proof made anywhere else in the package (this test file stands in for any other source) is refused, and nothing reaches install-token.
+    func testTheTransportRefusesARestrictedPayloadThatDidNotComeFromTheDebugModule() async throws {
+        let stub = StubServer(now: start)
+        let forged = AttestationPayload.restricted(RestrictedAttestation(field: "debug", value: ["challenge": "chal-1"]))
+        let transport = try makeTransport(stub: stub, provider: RecordingProvider(payload: forged))
+        do { _ = try await transport.send(journeyRequest()); XCTFail("expected a refusal") }
+        catch let error as LensJourneyError {
+            XCTAssertEqual(error.kind, .attestationFailed); XCTAssertEqual(error.code, "ATTESTATION_PAYLOAD_NOT_ALLOWED")
+        }
+        let paths = await stub.calls.map(\.path)
+        XCTAssertFalse(paths.contains { $0.hasSuffix("install-token") }, "no install-token request may be sent for a payload from outside the debug module")
+    }
+
+    func testRestrictedPayloadsDoNotPrintTheirContents() {
+        let payload = DebugAttestationProvider.payload(challenge: "chal-secret")
+        XCTAssertFalse(String(reflecting: payload).contains("chal-secret"))
+        XCTAssertFalse("\(payload)".contains("chal-secret"))
     }
 
     // MARK: through the real LensJourney
@@ -660,4 +683,11 @@ private actor StubServer: Transport {
         let f = ISO8601DateFormatter(); f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         return f.string(from: date)
     }
+}
+
+
+/// Test-only shorthand for the payload the opt-in debug module makes. The core product has no `.debug` case; the tests get one from
+/// `LensJourneyDebugAttestation`, the same way an app's staging target would.
+extension AttestationPayload {
+    static func debug(challenge: String) -> AttestationPayload { DebugAttestationProvider.payload(challenge: challenge) }
 }

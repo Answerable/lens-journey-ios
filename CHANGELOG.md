@@ -2,6 +2,15 @@
 
 All notable changes to the Lens Journey Swift SDK. Versions are `0.x`: the API can change in a minor release (see the README).
 
+## 0.4.0 (pre-release 0.x, unpublished)
+
+- **Breaking, source, security:** the core `LensJourney` product no longer has any way to make or send a debug attestation. `AttestationPayload.debug(challenge:)` is removed and `DebugAttestationProvider` moves out of the core product into a new opt-in product, **`LensJourneyDebugAttestation`**. Staging, simulator and staging-TestFlight targets add that product; production targets do not link it. (A first attempt compiled the provider only under `#if DEBUG`, but a package cannot control its consumers' build configuration, a Release build could still implement `AttestationProvider` and send `.debug`, and the type was still offered by the core product.)
+- New: `AttestationPayload.restricted(RestrictedAttestation)`. `RestrictedAttestation` has no public initializer and no public fields (`package` access), so apps outside the package cannot create or read one. An exhaustive `switch` over `AttestationPayload` needs the new case.
+- New: the transport sends a restricted proof only if it was created in the `LensJourneyDebugAttestation` module; any other restricted proof is refused with `.attestationFailed` (`ATTESTATION_PAYLOAD_NOT_ALLOWED`) before `install-token` is called.
+- New: `DebugAttestationProvider.payload(challenge:)` (in `LensJourneyDebugAttestation`) for tests and custom providers in debug targets. `DebugAttestationProvider` itself works in Debug and Release when linked.
+- New: `scripts/check-debug-attestation-boundary.sh` (replaces `scripts/check-release-has-no-debug-provider.sh`): binary check that the core Release object has no `DebugAttestationProvider`, compile-fail checks from an app outside the package (`.debug`, the provider, forging and reading a `RestrictedAttestation`), a check that an app linking the debug product builds and runs in Debug and Release, and the same boundary for an Xcode-project iOS app built with `xcodebuild` for the iOS Simulator (a production target and a staging target, Debug and Release, both Release binaries inspected).
+- `LensJourney.version` is `"0.4.0"`. Not tagged or released: the maintainers publish the version.
+
 ## 0.3.0 (pre-release 0.x, unpublished)
 
 - **New, the headline:** the app can talk to VARAi directly with an attested mobile publishable key (`cspk_...`) instead of through a merchant proxy. The merchant's platform prices the cart; the app only passes the configuration id and the session id (ADR-369).

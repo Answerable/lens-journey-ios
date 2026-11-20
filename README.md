@@ -4,14 +4,14 @@
 
 `LensJourney` is a Foundation-only Swift package for Commerce Studio's server-driven lens journey. It requires iOS 15 or macOS 12 and Swift 5.9. The SDK contains no lens rules and no API secret.
 
-**How the app is authenticated (0.3.0).** The app talks to VARAi directly, with an attested mobile publishable key (`cspk_...`). The merchant's platform prices the cart: the app hands the journey result (`configuration id` and `sessionId`) to the merchant's cart, and the merchant's platform prices it from its own catalogue (ADR-369). The app never prices anything and never holds a secret key. A secret key (`cs_...`) must never ship in an app, and the SDK refuses one.
+**How the app is authenticated (0.3.0 and later).** The app talks to VARAi directly, with an attested mobile publishable key (`cspk_...`). The merchant's platform prices the cart: the app hands the journey result (`configuration id` and `sessionId`) to the merchant's cart, and the merchant's platform prices it from its own catalogue (ADR-369). The app never prices anything and never holds a secret key. A secret key (`cs_...`) must never ship in an app, and the SDK refuses one.
 
 ```swift
 // The mobile key comes from your VARAi dashboard. MobileKeyConfig refuses a secret cs_ key and anything that is not cspk_.
 let mobile = try MobileKeyConfig(
     mobileKey: appMobileKey,                       // "cspk_..."
     baseURL: apiBaseURL,                           // the VARAi API URL for your environment (https)
-    attestationProvider: AppAttestProvider(),      // DebugAttestationProvider() only against a staging server
+    attestationProvider: AppAttestProvider(),      // staging/simulator targets only: DebugAttestationProvider() from the LensJourneyDebugAttestation product
     installIdStore: UserDefaultsInstallIdStore()   // keep the install id across launches
 )
 let journey = try LensJourney.mobile(config: try JourneyConfig(currency: "USD", store: "us"), mobileKey: mobile)
@@ -37,7 +37,21 @@ The token is kept in memory and replaced about 5 minutes before it expires (half
 
 **`AppAttestProvider`** uses `DCAppAttestService` (iOS 14+). Enable the App Attest capability for your app. The first token for an install creates a key, attests it over the challenge and sends the attestation. The key id is kept in the Keychain only once the server has accepted it; every later token is a refresh that sends an assertion with that key. The server accepts a new attestation only for an install that has no accepted key yet, and answers every failure with the same `401 ATTESTATION_FAILED`. So the SDK recovers like this: a refused **first** attestation (for example an install id restored from a backup while its Keychain key stayed on the old device, or an accepted attestation whose answer was lost) starts a **new install** (a new install id) and mints once more in the same call; one refused **assertion** is tolerated and keeps the key, because it may be transient; a second refused assertion in a row also starts a new install. Each new install counts once against the per-key daily install cap when it is accepted. The hash App Attest signs is the SHA-256 of the UTF-8 challenge string. On a simulator, or anywhere App Attest is unsupported, it throws `LensJourneyError.Kind.attestationFailed` (code `ATTESTATION_UNAVAILABLE`); there is no fallback to a weaker proof.
 
-**`DebugAttestationProvider` is for staging only.** It sends the challenge back unsigned. A production VARAi server refuses a debug binding when it is issued and again when it is used, so it works only against staging, test or development servers. Use it for simulator runs and CI against staging, and never ship it in a release build (for example `#if DEBUG`).
+**`DebugAttestationProvider` is for staging only, and it is a separate product.** It sends the challenge back unsigned. A production VARAi server refuses a debug binding when it is issued and again when it is used, so it works only against staging, test or development servers. It lives in the opt-in product **`LensJourneyDebugAttestation`**, not in the core `LensJourney` product (0.4.0). The core product has no unsigned proof: no `.debug` case, no `DebugAttestationProvider`, and no public way to build one, so an app target that does not link the debug product cannot send a debug attestation at all, whatever its build configuration. (An earlier approach compiled the type only under `#if DEBUG`, but a package cannot control how its consumers are configured: a staging TestFlight build is a Release build.)
+
+How it is enforced. `AttestationPayload` has `.appAttest`, `.playIntegrity` and `.restricted(RestrictedAttestation)`. A `RestrictedAttestation` has no public initializer and no public fields: they use the `package` access level (Swift 5.9), so only targets of this package can create or read one, and `LensJourneyDebugAttestation` is the only target that does. The compiler refuses `RestrictedAttestation(...)` in an app that depends on the package. As a second line of defence the transport sends a restricted proof only if it was created in a source file of the `LensJourneyDebugAttestation` module (`#fileID`) and otherwise throws `.attestationFailed` with code `ATTESTATION_PAYLOAD_NOT_ALLOWED` before anything reaches `install-token`. `scripts/check-debug-attestation-boundary.sh` proves the rest: the core Release object has no `DebugAttestationProvider`; an app outside the package cannot compile `.debug(challenge:)`, `DebugAttestationProvider()`, `RestrictedAttestation(...)` or a read of one; an app that links the debug product builds and runs in Debug and Release; and for an Xcode-project iOS app (xcodebuild, iOS Simulator) a production target linking only `LensJourney` builds with no `DebugAttestationProvider` in its Release binary (and cannot compile a reference to it), while a staging target linking `LensJourneyDebugAttestation` builds in Debug and Release and its Release binary contains it.
+
+Use it for simulator runs, CI and staging builds against a staging server:
+
+```swift
+// Package.swift or Xcode: link the product into the debug/staging target ONLY, never the production target.
+.product(name: "LensJourneyDebugAttestation", package: "lens-journey-ios")
+
+import LensJourneyDebugAttestation
+let provider: AttestationProvider = DebugAttestationProvider()   // staging server only
+```
+
+**Migrating from 0.3.0 (source-incompatible).** In 0.3.0 `AttestationPayload` had `.debug(challenge:)` and `DebugAttestationProvider` was in the core product. In 0.4.0: (1) `.debug(challenge:)` is gone, so a custom provider that returned it must use `DebugAttestationProvider` from the new product instead (or be removed); (2) `AttestationPayload` has a new case `.restricted`, so an exhaustive `switch` over it needs that case; (3) staging, simulator and TestFlight-staging targets add the `LensJourneyDebugAttestation` product and `import LensJourneyDebugAttestation`; production targets do not link it and must not name `DebugAttestationProvider`. A production release gate that scans the binary for `DebugAttestationProvider` then passes because the symbol is only in the targets that opted in.
 
 **Your own provider.** Implement `AttestationProvider.attest(challenge:installId:) async throws -> AttestationPayload`. The optional `attestationAccepted(installId:)`, `attestationRejected(installId:)` and `installIdReplaced(_:)` let a provider commit or drop state around the server's verdict: drop what you staged for a refused attempt, keep what the server already accepted, and drop everything for the old id when the SDK starts a new install.
 
@@ -86,14 +100,14 @@ A 2xx body that cannot be decoded (for example a `subtotal` that is neither a de
 
 `JourneyConfig(brand:)` is optional and takes a brand code the server knows (for example `"ACME"`). It must match the server's rule, a letter followed by up to 31 letters or digits after trimming (the server compares case-insensitively); anything else throws `.invalidRequest` from the initializer, and the trimmed value is what is sent. When set, the SDK sends `brand` on every `/evaluate` call and on the `/configurations` call made by `finish()`, so the server picks that brand's workflow. When nil it sends no `brand` field and behaviour is unchanged.
 
-`LensJourney.version` is the SDK version (`"0.3.0"`).
+`LensJourney.version` is the SDK version (`"0.4.0"`).
 
 ## Distribution
 
 Add the package by URL and pin an exact version while the API is `0.x`; commit Xcode's `Package.resolved`:
 
 ```swift
-.package(url: "https://github.com/Answerable/lens-journey-ios.git", exact: "0.3.0")
+.package(url: "https://github.com/Answerable/lens-journey-ios.git", exact: "0.4.0")
 ```
 
 ## Changelog

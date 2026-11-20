@@ -127,7 +127,13 @@ public actor MobileKeyTransport: Transport {
             if let assertion { ios["assertion"] = assertion.base64EncodedString() }
             body["ios"] = ios
         case let .playIntegrity(token): body["android"] = ["integrity_token": token]
-        case let .debug(challenge): body["debug"] = ["challenge": challenge]
+        case let .restricted(proof):
+            // Only a proof made in the opt-in debug module goes out. The compiler already keeps outside code from making one (`package`
+            // access); this refuses a proof from any other file of the package too.
+            guard proof.origin.hasPrefix(RestrictedAttestation.allowedOriginPrefix) else {
+                throw LensJourneyError(kind: .attestationFailed, code: "ATTESTATION_PAYLOAD_NOT_ALLOWED", message: "This attestation payload did not come from a module that is allowed to produce it.")
+            }
+            body[proof.field] = proof.value
         }
 
         let tokenResponse: TransportResponse

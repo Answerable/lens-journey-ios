@@ -1,0 +1,51 @@
+# A stand-in for an Xcode-PROJECT iOS app (not a SwiftPM executable) that depends on the LensJourney package. Used only by
+# scripts/check-debug-attestation-boundary.sh, which generates the .xcodeproj with xcodegen into a temp dir.
+#   ProductionApp            links only LensJourney. Must build, and its Release binary must not contain DebugAttestationProvider.
+#   ProductionFailProvider   links only LensJourney and names DebugAttestationProvider. Must NOT build.
+#   ProductionFailRestricted links only LensJourney and constructs a RestrictedAttestation. Must NOT build.
+#   StagingApp               links LensJourneyDebugAttestation too. Must build in Debug and Release, and its Release binary contains the provider.
+name: BoundaryFixture
+options:
+  deploymentTarget:
+    iOS: "15.0"
+  createIntermediateGroups: false
+packages:
+  LensJourney:
+    path: ../lens-journey-ios
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    GENERATE_INFOPLIST_FILE: YES
+    CODE_SIGNING_ALLOWED: NO
+    CODE_SIGNING_REQUIRED: NO
+    DEAD_CODE_STRIPPING: YES
+targets:
+  ProductionApp:
+    type: application
+    platform: iOS
+    sources: [ProductionApp]
+    settings: { base: { PRODUCT_BUNDLE_IDENTIFIER: ai.varai.fixture.production } }
+    dependencies:
+      - { package: LensJourney, product: LensJourney }
+  ProductionFailProvider:
+    type: application
+    platform: iOS
+    sources: [ProductionFailProvider]
+    settings: { base: { PRODUCT_BUNDLE_IDENTIFIER: ai.varai.fixture.failprovider } }
+    dependencies:
+      - { package: LensJourney, product: LensJourney }
+  ProductionFailRestricted:
+    type: application
+    platform: iOS
+    sources: [ProductionFailRestricted]
+    settings: { base: { PRODUCT_BUNDLE_IDENTIFIER: ai.varai.fixture.failrestricted } }
+    dependencies:
+      - { package: LensJourney, product: LensJourney }
+  StagingApp:
+    type: application
+    platform: iOS
+    sources: [StagingApp]
+    settings: { base: { PRODUCT_BUNDLE_IDENTIFIER: ai.varai.fixture.staging } }
+    dependencies:
+      - { package: LensJourney, product: LensJourney }
+      - { package: LensJourney, product: LensJourneyDebugAttestation }
